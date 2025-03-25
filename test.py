@@ -16,6 +16,24 @@ TARGET_HEIGHT = "height"
 VK_LBUTTON = 0x01  # Linke Maustaste
 VK_RBUTTON = 0x02  # Rechte Maustaste
 
+class Events:
+    BUY = "BUY"
+    REFRESH = "REFRESH"
+    CONFIRM = "CONFIRM"
+    DRAG = "DRAG"
+    
+class E7_Pos:
+    REFRESH_X = 40
+    REFRESH_Y = 10
+    
+    CONFIRM_X = 1
+    CONFIRM_Y = 1
+    
+    DRAG_START_X =
+    DRAG_START_Y =
+    DRAG_DST_X =
+    DRAG_DST_Y =
+
 user32 = ctypes.windll.user32
 gdi32 = ctypes.windll.gdi32
 
@@ -32,7 +50,7 @@ class MOUSEINPUT(ctypes.Structure):
 class INPUT(ctypes.Structure):
     _fields_ = [("type", ctypes.c_ulong), ("mi", MOUSEINPUT)] #type gibt art des inputs an [0] ist INPUT_MOUSE
 
-class Auto_refresher():
+class Scrip_Modules():
     
 
     def __init__(self):
@@ -48,10 +66,20 @@ class Auto_refresher():
             TARGET_HEIGHT: 0
         }
 
-    def sync_target_info(self):
+        
+    def _sync_target_info(self):
+            
+            def target_window_visible(self):
+                fill_out = None
+                return False
+                
             self.hwnd = user32.FindWindowW(None, TARGET_GAME)
             if self.hwnd == 0:
                 raise Exception("EPIC SEVEN IST NICHT OFFEN!")
+            visible = target_window_visible()
+            if visible == False:
+                return
+            
             
             rect = wintypes.RECT()
             user32.GetWindowRect(self.hwnd, ctypes.byref(rect))
@@ -98,15 +126,6 @@ class Auto_refresher():
                 print("Rechte Maustaste gedrückt!")
             return in_use
 
-    def check_content(self):
-        i = 0
-        
-    def input_test(self):
-        i = 0
-
-    def target_window_visible():
-        fill_out = None
-        
     def test_function(self, x, y):
         active_mouse = self.check_active_mouse()
         if active_mouse == False:
@@ -124,6 +143,51 @@ class Auto_refresher():
         abs_x = int(x * 65535 / self.screen_width)
         abs_y = int(y * 65535 / self.screen_height)
         return abs_x, abs_y
+    
+    def control_checks(self):
+        in_use = self.check_active_mouse()
+        if in_use == False:
+            self._sync_target_info()
+            return True
+        else: 
+            return False
+    
+    def get_click_position(self, x, y):
+        pixel_x = self.wnd_stats[TARGET_X_POS] + (int((x/160) * self.wnd_stats[TARGET_WIDTH]))
+        pixel_y = self.wnd_stats[TARGET_Y_POS] + (int((y/90) * self.wnd_stats[TARGET_HEIGHT]))
+        return pixel_x, pixel_y
+    
+    def match_events(self, event):
+        match event:
+            
+            case Events.BUY:
+                check = self.control_checks()
+                if check == True:
+                    #bild anlyse
+                    x, y = david seine funktio
+                    self.click_event(x, y)
+                
+            case Events.REFRESH:
+                check = self.control_checks()
+                if check == True:
+                    x, y = self.get_click_position(E7_Pos.CONFIRM_X, E7_Pos.CONFIRM_Y)
+                    self.click_event(x, y)
+                    
+            case Events.CONFIRM:
+                check = self.control_checks()
+                if check == True:
+                    x, y = self.get_click_position(E7_Pos.REFRESH_X, E7_Pos.REFRESH_Y)
+                    self.click_event(x, y)
+                    
+            case Events.DRAG:
+                check = self.control_checks()
+                if check == True:
+                    start_x, start_y = self.get_click_position(E7_Pos.DRAG_START_X, E7_Pos.DRAG_START_Y)
+                    dst_x, dst_y = self.get_click_position(E7_Pos.DRAG_DST_X, E7_Pos.DRAG_START_Y)
+                    self.drag_event(start_x, start_y, dst_x, dst_y)
+                    
+            case _:
+                print("Unknown event type")
 
     def click_event(self,target_x, target_y):
         """Simuliert einen Mausklick an (x, y) ohne sichtbare Mausbewegung"""
@@ -147,36 +211,9 @@ class Auto_refresher():
 
         curr_x, curr_y = self.get_cursor_pos()
         user32.SendInput(3, ctypes.byref(inputs), ctypes.sizeof(INPUT))
-        self.set_cursor_pos(curr_x, curr_y)
-        
-        self.event_counter += 1
-        
+        self.set_cursor_pos(curr_x, curr_y)        
         time.sleep(0.5)
     
-    def match_click_event(self, event):
-        match event:
-            case "buy":
-                #bild anlyse
-                
-                in_use = self.check_active_mouse()
-                if in_use == False:
-                    self.sync_target_info()
-                    self.click_event()
-                    return
-            case "refresh":
-                in_use = self.check_active_mouse()
-                if in_use == False:
-                    self.sync_target_info()
-                    self.click_event()
-                return
-            case "confire":
-                in_use = self.check_active_mouse()
-                if in_use == False:
-                    self.sync_target_info()
-                    self.click_event()
-            case _:
-                print("Unknown event type")
-                return
     
     def drag_event(self,target_x, target_y, dst_x, dst_y):
         
@@ -198,14 +235,11 @@ class Auto_refresher():
 
         curr_x, curr_y = self.get_cursor_pos()
         user32.SendInput(3, ctypes.byref(inputs), ctypes.sizeof(INPUT))
-        self.set_cursor_pos(curr_x, curr_y)
-        
-        self.event_counter += 1
-        
+        self.set_cursor_pos(curr_x, curr_y)        
         time.sleep(0.5)
 
 if __name__ =="__main__":
-    tri = Auto_refresher()
-    tri.test_function(100, 100)
+    script = Scrip_Modules()
+    script.test_function(100, 100)
 
     # asdasdas
