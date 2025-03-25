@@ -27,9 +27,11 @@ class INPUT(ctypes.Structure):
 
 class Auto_refresher():
     
-    #def __init__(self):
+    def __init__(self):
         #open ui
         #setup connections
+        self.screen_width = user32.GetSystemMetrics(0)  # Bildschirmbreite
+        self.screen_height = user32.GetSystemMetrics(1)  # Bildschirmhöhe
 
     def search_for_target_window(self ,target):
         length = 256
@@ -79,24 +81,27 @@ class Auto_refresher():
         fill_out = None
         
     def test_function(self, x, y):
-        self.screen_width = user32.GetSystemMetrics(0)  # Bildschirmbreite
-        self.screen_height = user32.GetSystemMetrics(1)  # Bildschirmhöhe
         active_mouse = self.check_active_mouse()
         if active_mouse == False:
             self.click_event(x, y)
-
-    def click_event(self,x, y):
-        """Simuliert einen Mausklick an (x, y) ohne sichtbare Mausbewegung"""
-        def get_cursor_pos():
-            pt = wintypes.POINT()
-            user32.GetCursorPos(ctypes.byref(pt))
-            return pt.x, pt.y
-
-        def set_cursor_pos(x, y):
-            user32.SetCursorPos(x, y)
     
+    def get_cursor_pos(self):
+        pt = wintypes.POINT()
+        user32.GetCursorPos(ctypes.byref(pt))
+        return pt.x, pt.y
+
+    def set_cursor_pos(self, x, y):
+        user32.SetCursorPos(x, y)
+        
+    def convert_coordinats(self,x,y):
         abs_x = int(x * 65535 / self.screen_width)
         abs_y = int(y * 65535 / self.screen_height)
+        return abs_x, abs_y
+
+    def click_event(self,target_x, target_y):
+        """Simuliert einen Mausklick an (x, y) ohne sichtbare Mausbewegung"""
+        
+        abs_x, abs_y = self.convert_coordinats(target_x, target_y)
         
         #wir erstellen 3 inputs
         inputs = (INPUT * 3)() #die klammer dahintert sorgt dafür das wir das array erstelle und nicht nur definieren
@@ -113,9 +118,37 @@ class Auto_refresher():
         inputs[2].type = 0
         inputs[2].mi = MOUSEINPUT(0, 0, 0, MOUSEEVENTF_LEFTUP, 0, None)
 
-        c_x, c_y = get_cursor_pos()
+        curr_x, curr_y = self.get_cursor_pos()
         user32.SendInput(3, ctypes.byref(inputs), ctypes.sizeof(INPUT))
-        set_cursor_pos(c_x, c_y)
+        self.set_cursor_pos(curr_x, curr_y)
+        time.sleep(0.5)
+    
+    def drag_event(self,target_x, target_y, dst_x, dst_y):
+        """Simuliert einen Mausklick an (x, y) ohne sichtbare Mausbewegung"""
+        
+        abs_x, abs_y = self.convert_coordinats(target_x, target_y)
+        
+        #wir erstellen 3 inputs
+        inputs = (INPUT * 4)() #die klammer dahintert sorgt dafür das wir das array erstelle und nicht nur definieren
+
+        # Unsichtbare Bewegung zur Position (x, y)
+        inputs[0].type = 0  # INPUT_MOUSE
+        inputs[0].mi = MOUSEINPUT(abs_x, abs_y, 0, MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE, 0, None) #wir übergeben die daten für das field
+
+        # Linksklick drücken
+        inputs[1].type = 0
+        inputs[1].mi = MOUSEINPUT(0, 0, 0, MOUSEEVENTF_LEFTDOWN, 0, None)
+
+        inputs[2].type = 0
+        inputs[2].mi = MOUSEINPUT(dst_x, dst_y, 0, MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE, 0, None)
+        
+        # Linksklick loslassen
+        inputs[3].type = 0
+        inputs[3].mi = MOUSEINPUT(0, 0, 0, MOUSEEVENTF_LEFTUP, 0, None)
+
+        curr_x, curr_y = self.get_cursor_pos()
+        user32.SendInput(3, ctypes.byref(inputs), ctypes.sizeof(INPUT))
+        self.set_cursor_pos(curr_x, curr_y)
         time.sleep(0.5)
 
 if __name__ =="__main__":
