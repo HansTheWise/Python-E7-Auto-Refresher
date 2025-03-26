@@ -44,16 +44,6 @@ class E7_Pos:
     BM_WIDTH = 1
     BM_HEIGHT = 83
 
-class BITMAP(Structure):
-    _fields_ = [
-        ("bmType", c_long),
-        ("bmWidth", c_long),
-        ("bmHeight", c_long),
-        ("bmWidthBytes", c_long),
-        ("bmPlanes", c_uint16),
-        ("bmBitsPixel", c_uint16),
-        ("bmBits", c_void_p),
-    ]
 
 user32 = ctypes.windll.user32
 gdi32 = ctypes.windll.gdi32
@@ -189,69 +179,6 @@ class Scrip_Modules():
         print(f"target area ({pixel_x},{pixel_y})")
         return pixel_x, pixel_y
 
-    def capture_pixels(self):
-        hwnd, exists = self.find_window(TARGET_GAME)
-        hdc = user32.GetDC(hwnd)
-        if not hdc:
-            raise RuntimeError("Failed to acquire DC!")
-
-        # Create compatible DC and bitmap
-        mem_hdc = gdi32.CreateCompatibleDC(hdc)
-        bitmap = gdi32.CreateCompatibleBitmap(hdc, self.wnd_stats[TARGET_WIDTH], self.wnd_stats[TARGET_HEIGHT])
-        gdi32.SelectObject(mem_hdc, bitmap)
-
-        # Copy pixels with BitBlt
-        gdi32.BitBlt(
-            mem_hdc,
-            0, 0,
-            E7_Pos.BM_WIDTH,
-            E7_Pos.BM_HEIGHT,
-            hdc,
-            E7_Pos.BOOKMARK_X,
-            E7_Pos.BOOKMARK_Y,
-            "gdi32.SRCCOPY"
-        )
-
-        # Get bitmap data
-        bmp_info = BITMAP()
-        gdi32.GetObjectW(bitmap, ctypes.sizeof(bmp_info), ctypes.byref(bmp_info))
-
-        # Read pixels into buffer
-        buffer = ctypes.create_string_buffer(bmp_info.bmWidthBytes * bmp_info.bmHeight)
-        gdi32.GetBitmapBits(bitmap, len(buffer), buffer)
-
-        # Convert to numpy array
-        buffer_np = np.frombuffer(buffer, dtype=np.uint8)
-
-        # Calculate bytes per pixel (e.g., 4 for 32-bit BGRX)
-        bytes_per_pixel = bmp_info.bmBitsPixel // 8  # 3 or 4
-
-        # Reshape considering padding (bmWidthBytes = width * bytes_per_pixel + padding)
-        buffer_np = buffer_np.reshape(
-            bmp_info.bmHeight,
-            bmp_info.bmWidthBytes  # Total bytes per row (including padding)
-        )
-
-        # Remove padding and reshape to (height, width, channels)
-        buffer_np = buffer_np[:, :bmp_info.bmWidth * bytes_per_pixel]  # Remove padding
-        buffer_np = buffer_np.reshape(
-            bmp_info.bmHeight,
-            bmp_info.bmWidth,
-            bytes_per_pixel  # 3 (BGR) or 4 (BGRX)
-        )
-
-        # Extract RGB channels (BGR → RGB)
-        if bytes_per_pixel == 4:
-            rgb_array = buffer_np[:, :, [2, 1, 0]]  # BGRX → RGB (ignore alpha)
-        elif bytes_per_pixel == 3:
-            rgb_array = buffer_np[:, :, [2, 1, 0]]  # BGR → RGB
-        else:
-            raise ValueError(f"Unsupported pixel format: {bytes_per_pixel} bytes/pixel")
-
-        print("RGB-Array Shape:", rgb_array.shape)
-        print(rgb_array)
-        return rgb_array
-
 
     def match_event(self, event):
         check = self.control_checks()
@@ -363,7 +290,6 @@ class Scrip_Modules():
     def test_function(self):
             #check
             self.match_event(Events.SCROLL)
-            self.capture_pixels()
             #check
             #self.match_event(Events.REFRESH)
             #self.match_event(Events.CONFIRM)
