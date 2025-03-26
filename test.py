@@ -4,6 +4,7 @@ from ctypes import wintypes
 import time
 from ctypes import wintypes, Structure, c_long, c_void_p, c_uint16, sizeof
 
+# mach einfach
 
 MOUSEEVENTF_LEFTDOWN = 0x0002
 MOUSEEVENTF_LEFTUP = 0x0004
