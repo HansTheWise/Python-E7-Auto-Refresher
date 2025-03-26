@@ -26,6 +26,8 @@ class Events:
     CONFIRM = "CONFIRM"
     DRAG = "DRAG"
     SCROLL = "SCROLL"    
+    NO_SKYSTONES = "NO_SKYSTONES"
+    
 class E7_Pos:
     REFRESH_X = 30
     REFRESH_Y = 82
