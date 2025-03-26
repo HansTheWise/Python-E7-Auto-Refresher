@@ -38,7 +38,7 @@ class E7_Pos:
     DRAG_DST_X = None
     DRAG_DST_Y = None
 
-    SCROLL_DOWN3 = 3
+    SCROLL_DOWN = 1
 #-------------
     BOOKMARK_X = 74
     BOOKMARK_Y = 7
@@ -130,9 +130,6 @@ class Scrip_Modules():
         if not result:
             raise Exception("Failed to bring target window to the foreground!")
 
-
-
-
     def check_active_mouse(self):
             in_use = False
             # Überprüfen, ob die linke Maustaste gedrückt ist
@@ -144,8 +141,6 @@ class Scrip_Modules():
                 in_use = True
                 print("Rechte Maustaste gedrückt!")
             return in_use
-
-
 
     def get_cursor_pos(self):
         pt = wintypes.POINT()
@@ -183,10 +178,9 @@ class Scrip_Modules():
 
     def match_event(self, event):
         check = self.control_checks()
-        time.sleep(0.3)
         if check == False:
             return
-        
+        time.sleep(0.4)
         match event:
             case Events.BUY:
                 print("NICK GRRR")
@@ -208,7 +202,7 @@ class Scrip_Modules():
                 dst_x, dst_y = self.get_click_position(E7_Pos.DRAG_DST_X, E7_Pos.DRAG_START_Y)
                 self.drag_event(start_x, start_y, dst_x, dst_y)
             case Events.SCROLL:
-                self.scroll_down(E7_Pos.SCROLL_DOWN3)
+                self.scroll_down(1)
             case _:
                 print("Unknown event type")
 
@@ -233,11 +227,11 @@ class Scrip_Modules():
         inputs[2].mi = MOUSEINPUT(0, 0, 0, MOUSEEVENTF_LEFTUP, 0, None)
 
         curr_x, curr_y = self.get_cursor_pos()
-        user32.SendInput(3, inputs, ctypes.sizeof(INPUT))
-        #if result != 3:
-        #    print(f"Fehler bei SendInput. Erwartet: 3, Gesendet: {result}")
-        #else:
-            #print("Klick erfolgreich ausgeführt.")
+        result = user32.SendInput(3, inputs, ctypes.sizeof(INPUT))
+        if result != 3:
+            print(f"Fehler bei SendInput. Erwartet: 3, Gesendet: {result}")
+        else:
+            print("Klick erfolgreich ausgeführt.")
         self.set_cursor_pos(curr_x, curr_y) 
 
     def scroll_down(self, steps=1):
@@ -252,7 +246,7 @@ class Scrip_Modules():
         scroll_input[0].type = 0
         scroll_input[0].mi = MOUSEINPUT(abs_x, abs_y, 0, MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE, 0, None)
         i = 1
-        WHEEL_DELTA = -120
+        WHEEL_DELTA = -360
         while i != steps:
             scroll_input[i].type = 0
             scroll_input[i].mi = MOUSEINPUT(0,  0,  WHEEL_DELTA,  MOUSEEVENTF_WHEEL, 0, None)
@@ -260,10 +254,8 @@ class Scrip_Modules():
             
         
         user32.SendInput(steps, ctypes.byref(scroll_input), ctypes.sizeof(INPUT))
-
-    # 4. Maus zurück zur Originalposition
         self.set_cursor_pos(original_x, original_y)
-    
+
     def drag_event(self,target_x, target_y, dst_x, dst_y):
         
         abs_tx, abs_ty = self.convert_coordinats(target_x, target_y)
@@ -291,9 +283,8 @@ class Scrip_Modules():
     def test_function(self):
             #check
             self.match_event(Events.SCROLL)
-            #check
-            #self.match_event(Events.REFRESH)
-            #self.match_event(Events.CONFIRM)
+            self.match_event(Events.REFRESH)
+            self.match_event(Events.CONFIRM)
 
 
 if __name__ =="__main__":
