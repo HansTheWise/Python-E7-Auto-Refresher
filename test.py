@@ -1,6 +1,9 @@
 import ctypes
+import numpy as np
 from ctypes import wintypes
 import time
+from ctypes import wintypes, Structure, c_long, c_void_p, c_uint16, sizeof
+
 
 MOUSEEVENTF_LEFTDOWN = 0x0002
 MOUSEEVENTF_LEFTUP = 0x0004
@@ -33,8 +36,24 @@ class E7_Pos:
     DRAG_START_Y = None
     DRAG_DST_X = None
     DRAG_DST_Y = None
-    
+
     SCROLL_DOWN3 = 3
+#-------------
+    BOOKMARK_X = 74
+    BOOKMARK_Y = 7
+    BM_WIDTH = 1
+    BM_HEIGHT = 83
+
+class BITMAP(Structure):
+    _fields_ = [
+        ("bmType", c_long),
+        ("bmWidth", c_long),
+        ("bmHeight", c_long),
+        ("bmWidthBytes", c_long),
+        ("bmPlanes", c_uint16),
+        ("bmBitsPixel", c_uint16),
+        ("bmBits", c_void_p),
+    ]
 
 user32 = ctypes.windll.user32
 gdi32 = ctypes.windll.gdi32
@@ -55,7 +74,7 @@ class INPUT(ctypes.Structure):
     _fields_ = [("type", ctypes.c_ulong), ("mi", MOUSEINPUT)] #type gibt art des inputs an [0] ist INPUT_MOUSE
 
 class Scrip_Modules():
-    
+
 
     def __init__(self):
         #open ui
@@ -69,17 +88,17 @@ class Scrip_Modules():
             TARGET_WIDTH: 0,
             TARGET_HEIGHT: 0
         }
-        
+
     def find_window(self, target):
-        
+
         hwnd = user32.FindWindowW(None, target)
         if hwnd == 0:
             print("EPIC SEVEN IST NICHT OFFEN!")
             return None, False
         return hwnd, True
-    
+
     def _sync_target_info(self):
-            
+
         rect = wintypes.RECT()
         user32.GetWindowRect(self.hwnd, ctypes.byref(rect))
 
@@ -96,44 +115,31 @@ class Scrip_Modules():
         print(f"Position: ({self.wnd_stats[TARGET_X_POS]}, {self.wnd_stats[TARGET_Y_POS]})")
         print(f"Größe: {self.wnd_stats[TARGET_WIDTH]} x {self.wnd_stats[TARGET_HEIGHT]}")
         print("-" * 40)
-        
+
     def is_window_foreground(self ,target_hwnd):
             # Get the handle of the currently foreground window
             foreground_hwnd = user32.GetForegroundWindow()
             if not target_hwnd == foreground_hwnd:
                 self._bring_target_to_foreground()
                 return True
-            return target_hwnd == foreground_hwnd    
+            return target_hwnd == foreground_hwnd
 
     def _bring_target_to_foreground(self):
         # Make sure self.hwnd is set
         if not self.hwnd:
             raise Exception("Target window handle is invalid.")
-            
+
         # Optionally restore the window if it is minimized:
         SW_RESTORE = 9
         user32.ShowWindow(self.hwnd, SW_RESTORE)
-        
+
         # Bring the window to the foreground
         result = user32.SetForegroundWindow(self.hwnd)
-        
+
         if not result:
-            raise Exception("Failed to bring target window to the foreground!") 
-            
+            raise Exception("Failed to bring target window to the foreground!")
 
-    def capture_pixels(self):
-        hdc = user32.GetDC(self.hwnd)
-        if not hdc:
-            raise RuntimeError("Failed to acquire DC!")
-        
-                # Create a compatible DC and bitmap to store pixels
-        mem_hdc = gdi32.CreateCompatibleDC(hdc)
-        bitmap = gdi32.CreateCompatibleBitmap(hdc, self.wnd_stats[TARGET_WIDTH], self.wnd_stats[TARGET_HEIGHT] )
-        gdi32.SelectObject(mem_hdc, bitmap)
 
-        gdi32.BitBlt(mem_hdc, 0, 0, self.wnd_stats[TARGET_WIDTH], self.wnd_stats[TARGET_HEIGHT],
-                     hdc, self.wnd_stats[TARGET_X_POS], self.wnd_stats[TARGET_Y_POS], gdi32.SRCCOPY  # source copy kopiermodus für pixelkopie
-                     )
 
 
     def check_active_mouse(self):
@@ -148,13 +154,8 @@ class Scrip_Modules():
                 print("Rechte Maustaste gedrückt!")
             return in_use
 
-    def test_function(self):
-            #check
-            self.match_event(Events.SCROLL)
-            #check
-            self.match_event(Events.REFRESH)
-            #self.match_event(Events.CONFIRM)
-    
+
+
     def get_cursor_pos(self):
         pt = wintypes.POINT()
         user32.GetCursorPos(ctypes.byref(pt))
@@ -162,12 +163,12 @@ class Scrip_Modules():
 
     def set_cursor_pos(self, x, y):
         user32.SetCursorPos(x, y)
-        
+
     def convert_coordinats(self,x,y):
         abs_x = int((x / self.screen_width) * 65535)
         abs_y = int((y / self.screen_height) * 65535)
         return abs_x, abs_y
-    
+
     def control_checks(self):
         self.hwnd, exists = self.find_window(TARGET_GAME)
         if exists == False:
@@ -179,15 +180,79 @@ class Scrip_Modules():
         if in_use == False and on_screen == True:
             self._sync_target_info()
             return True
-        else: 
+        else:
             return False
-    
+
     def get_click_position(self, x, y):
         pixel_x = self.wnd_stats[TARGET_X_POS] + int((x/160) * self.wnd_stats[TARGET_WIDTH])
         pixel_y = self.wnd_stats[TARGET_Y_POS] + int((y/90) * self.wnd_stats[TARGET_HEIGHT])
         print(f"target area ({pixel_x},{pixel_y})")
         return pixel_x, pixel_y
-    
+
+    def capture_pixels(self):
+        hwnd, exists = self.find_window(TARGET_GAME)
+        hdc = user32.GetDC(hwnd)
+        if not hdc:
+            raise RuntimeError("Failed to acquire DC!")
+
+        # Create compatible DC and bitmap
+        mem_hdc = gdi32.CreateCompatibleDC(hdc)
+        bitmap = gdi32.CreateCompatibleBitmap(hdc, self.wnd_stats[TARGET_WIDTH], self.wnd_stats[TARGET_HEIGHT])
+        gdi32.SelectObject(mem_hdc, bitmap)
+
+        # Copy pixels with BitBlt
+        gdi32.BitBlt(
+            mem_hdc,
+            0, 0,
+            E7_Pos.BM_WIDTH,
+            E7_Pos.BM_HEIGHT,
+            hdc,
+            E7_Pos.BOOKMARK_X,
+            E7_Pos.BOOKMARK_Y,
+            "gdi32.SRCCOPY"
+        )
+
+        # Get bitmap data
+        bmp_info = BITMAP()
+        gdi32.GetObjectW(bitmap, ctypes.sizeof(bmp_info), ctypes.byref(bmp_info))
+
+        # Read pixels into buffer
+        buffer = ctypes.create_string_buffer(bmp_info.bmWidthBytes * bmp_info.bmHeight)
+        gdi32.GetBitmapBits(bitmap, len(buffer), buffer)
+
+        # Convert to numpy array
+        buffer_np = np.frombuffer(buffer, dtype=np.uint8)
+
+        # Calculate bytes per pixel (e.g., 4 for 32-bit BGRX)
+        bytes_per_pixel = bmp_info.bmBitsPixel // 8  # 3 or 4
+
+        # Reshape considering padding (bmWidthBytes = width * bytes_per_pixel + padding)
+        buffer_np = buffer_np.reshape(
+            bmp_info.bmHeight,
+            bmp_info.bmWidthBytes  # Total bytes per row (including padding)
+        )
+
+        # Remove padding and reshape to (height, width, channels)
+        buffer_np = buffer_np[:, :bmp_info.bmWidth * bytes_per_pixel]  # Remove padding
+        buffer_np = buffer_np.reshape(
+            bmp_info.bmHeight,
+            bmp_info.bmWidth,
+            bytes_per_pixel  # 3 (BGR) or 4 (BGRX)
+        )
+
+        # Extract RGB channels (BGR → RGB)
+        if bytes_per_pixel == 4:
+            rgb_array = buffer_np[:, :, [2, 1, 0]]  # BGRX → RGB (ignore alpha)
+        elif bytes_per_pixel == 3:
+            rgb_array = buffer_np[:, :, [2, 1, 0]]  # BGR → RGB
+        else:
+            raise ValueError(f"Unsupported pixel format: {bytes_per_pixel} bytes/pixel")
+
+        print("RGB-Array Shape:", rgb_array.shape)
+        print(rgb_array)
+        return rgb_array
+
+
     def match_event(self, event):
         check = self.control_checks()
         time.sleep(0.3)
@@ -196,9 +261,10 @@ class Scrip_Modules():
         
         match event:
             case Events.BUY:
+                print("NICK GRRR")
                 #bild anlyse
                 #x, y = david seine funktio
-                self.click_event(x, y)
+                #self.click_event(x, y)
                 
             case Events.REFRESH:
                 print(f"refreshing")
@@ -292,6 +358,16 @@ class Scrip_Modules():
         user32.SendInput(4, inputs, ctypes.sizeof(INPUT))
         self.set_cursor_pos(curr_x, curr_y)        
         time.sleep(0.5)
+
+
+    def test_function(self):
+            #check
+            self.match_event(Events.SCROLL)
+            self.capture_pixels()
+            #check
+            #self.match_event(Events.REFRESH)
+            #self.match_event(Events.CONFIRM)
+
 
 if __name__ =="__main__":
     script = Scrip_Modules()
