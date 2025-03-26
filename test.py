@@ -6,6 +6,7 @@ MOUSEEVENTF_LEFTDOWN = 0x0002
 MOUSEEVENTF_LEFTUP = 0x0004
 MOUSEEVENTF_ABSOLUTE = 0x8000
 MOUSEEVENTF_MOVE = 0x0001
+MOUSEEVENTF_WHEEL = 0x0800
 
 TARGET_X_POS = "x_pos" 
 TARGET_Y_POS = "y_pos"
@@ -20,7 +21,7 @@ class Events:
     REFRESH = "REFRESH"
     CONFIRM = "CONFIRM"
     DRAG = "DRAG"
-    
+    SCROLL = "SCROLL"    
 class E7_Pos:
     REFRESH_X = 30
     REFRESH_Y = 82
@@ -28,10 +29,12 @@ class E7_Pos:
     CONFIRM_X = 92
     CONFIRM_Y = 58
     
-    DRAG_START_X = None
+    DRAG_START_X = 130
     DRAG_START_Y = None
     DRAG_DST_X = None
     DRAG_DST_Y = None
+    
+    SCROLL_DOWN3 = 3
 
 user32 = ctypes.windll.user32
 gdi32 = ctypes.windll.gdi32
@@ -146,8 +149,11 @@ class Scrip_Modules():
             return in_use
 
     def test_function(self):
+            #check
+            self.match_event(Events.SCROLL)
+            #check
             self.match_event(Events.REFRESH)
-            self.match_event(Events.CONFIRM)
+            #self.match_event(Events.CONFIRM)
     
     def get_cursor_pos(self):
         pt = wintypes.POINT()
@@ -184,7 +190,7 @@ class Scrip_Modules():
     
     def match_event(self, event):
         check = self.control_checks()
-        time.sleep(0.5)
+        time.sleep(0.3)
         if check == False:
             return
         
@@ -207,7 +213,8 @@ class Scrip_Modules():
                 start_x, start_y = self.get_click_position(E7_Pos.DRAG_START_X, E7_Pos.DRAG_START_Y)
                 dst_x, dst_y = self.get_click_position(E7_Pos.DRAG_DST_X, E7_Pos.DRAG_START_Y)
                 self.drag_event(start_x, start_y, dst_x, dst_y)
-                
+            case Events.SCROLL:
+                self.scroll_down(E7_Pos.SCROLL_DOWN3)
             case _:
                 print("Unknown event type")
 
@@ -238,9 +245,30 @@ class Scrip_Modules():
         #else:
             #print("Klick erfolgreich ausgeführt.")
         self.set_cursor_pos(curr_x, curr_y) 
-   
-        time.sleep(0.5)
-    
+
+    def scroll_down(self, steps=1):
+        
+        steps = steps + 1
+        # 1. Aktuelle Mausposition speichern
+        original_x, original_y = self.get_cursor_pos()
+        target_x, target_y =self.get_click_position(120, 45)
+        
+        abs_x, abs_y = self.convert_coordinats(target_x, target_y)
+        scroll_input = (INPUT * steps)()
+        scroll_input[0].type = 0
+        scroll_input[0].mi = MOUSEINPUT(abs_x, abs_y, 0, MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE, 0, None)
+        i = 1
+        WHEEL_DELTA = -120
+        while i != steps:
+            scroll_input[i].type = 0
+            scroll_input[i].mi = MOUSEINPUT(0,  0,  WHEEL_DELTA,  MOUSEEVENTF_WHEEL, 0, None)
+            i += 1
+            
+        
+        user32.SendInput(steps, ctypes.byref(scroll_input), ctypes.sizeof(INPUT))
+
+    # 4. Maus zurück zur Originalposition
+        self.set_cursor_pos(original_x, original_y)
     
     def drag_event(self,target_x, target_y, dst_x, dst_y):
         
@@ -261,7 +289,7 @@ class Scrip_Modules():
         inputs[3].mi = MOUSEINPUT(0, 0, 0, MOUSEEVENTF_LEFTUP, 0, None)
 
         curr_x, curr_y = self.get_cursor_pos()
-        user32.SendInput(3, inputs, ctypes.sizeof(INPUT))
+        user32.SendInput(4, inputs, ctypes.sizeof(INPUT))
         self.set_cursor_pos(curr_x, curr_y)        
         time.sleep(0.5)
 
