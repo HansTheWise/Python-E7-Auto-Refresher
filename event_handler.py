@@ -24,17 +24,21 @@ class Auto_Script(Scrip_Modules, colourrecognition):
         self.connect_buttons()
         self.set_styles()
         
-    def load_ui(self):
-        position = os.path.abspath(__file__) 
-        script_dir = os.path.dirname(position) 
-        ui_path = os.path.join(script_dir, UI_NAME)
-        uic.loadUi(ui_path, self)
-    
-    def connect_buttons(self):
-        self.start_button.clicked.connect(lambda: self.start_session())
-        self.pause_button.clicked.connect(lambda: self.pause_session())
-        self.stop_button.clicked.connect(lambda: self.stop_session())
+        def load_ui(self):
+            position = os.path.abspath(__file__) 
+            script_dir = os.path.dirname(position) 
+            ui_path = os.path.join(script_dir, UI_NAME)
+            uic.loadUi(ui_path, self)
+            
+        def connect_buttons(self):
+            self.start_button.clicked.connect(lambda: self.start_session())
+            self.pause_button.clicked.connect(lambda: self.pause_session())
+            self.stop_button.clicked.connect(lambda: self.stop_session())
         
+        def set_styles(self):
+            uwu = "shit"   
+    
+    
     def start_session(self):
         
         def verify_sky_amount(skystone_input):

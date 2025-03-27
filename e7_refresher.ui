@@ -6,14 +6,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>558</width>
-    <height>510</height>
+    <width>540</width>
+    <height>517</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
-  <widget class="QTextEdit" name="textEdit">
+  <widget class="QTextEdit" name="session_log">
    <property name="geometry">
     <rect>
      <x>200</x>
@@ -46,7 +46,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <item row="0" column="0">
      <layout class="QVBoxLayout" name="verticalLayout">
       <item>
-       <widget class="QPushButton" name="pushButton">
+       <widget class="QPushButton" name="start_button">
         <property name="minimumSize">
          <size>
           <width>159</width>
@@ -64,7 +64,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="pushButton_3">
+       <widget class="QPushButton" name="pause_button">
         <property name="minimumSize">
          <size>
           <width>159</width>
@@ -82,7 +82,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="pushButton_2">
+       <widget class="QPushButton" name="stop_button">
         <property name="minimumSize">
          <size>
           <width>159</width>
@@ -135,7 +135,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
        </spacer>
       </item>
       <item>
-       <widget class="QLineEdit" name="lineEdit">
+       <widget class="QLineEdit" name="skystone_input">
         <property name="minimumSize">
          <size>
           <width>19</width>
@@ -171,7 +171,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
      </widget>
     </item>
     <item>
-     <widget class="QLineEdit" name="lineEdit_2"/>
+     <widget class="QLineEdit" name="sky_per_bm"/>
     </item>
    </layout>
   </widget>
@@ -193,7 +193,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
      </widget>
     </item>
     <item>
-     <widget class="QLineEdit" name="lineEdit_3"/>
+     <widget class="QLineEdit" name="sky_per_mm"/>
     </item>
    </layout>
   </widget>
