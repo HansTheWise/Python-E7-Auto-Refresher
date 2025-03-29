@@ -137,11 +137,11 @@ class Scrip_Modules():
             # Überprüfen, ob die linke Maustaste gedrückt ist
             if user32.GetAsyncKeyState(VK_LBUTTON) & 0x8000:
                 in_use = True
-                print("Linke Maustaste gedrückt!")
+                print("Left Mouse pressed!")
             # Überprüfen, ob die rechte Maustaste gedrückt ist
             if user32.GetAsyncKeyState(VK_RBUTTON) & 0x8000:
                 in_use = True
-                print("Rechte Maustaste gedrückt!")
+                print("Right Mouse pressed!")
             return in_use
 
     def get_cursor_pos(self):
@@ -160,7 +160,7 @@ class Scrip_Modules():
     def control_checks(self):
         self.hwnd, exists = self.find_window(TARGET_GAME)
         if exists == False:
-            print("kein fenster")
+            print("no window found")
             return False
         on_screen = self.is_window_foreground(TARGET_GAME)
         in_use = self.check_active_mouse()
@@ -209,31 +209,26 @@ class Scrip_Modules():
                 print("Unknown event type")
 
     def click_event(self,target_x, target_y):
-        """Simuliert einen Mausklick an (x, y) ohne sichtbare Mausbewegung"""
         
         abs_x, abs_y = self.convert_coordinats(target_x, target_y)
         print(f"absolute coords = {abs_x},{abs_y}")
-        #wir erstellen 3 inputs
-        inputs = (INPUT * 3)() #die klammer dahintert sorgt dafür das wir das array erstelle und nicht nur definieren
+        inputs = (INPUT * 3)() 
 
-        # Unsichtbare Bewegung zur Position (x, y)
-        inputs[0].type = 0  # INPUT_MOUSE
+        inputs[0].type = 0 
         inputs[0].mi = MOUSEINPUT(abs_x, abs_y, 0, MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE, 0, None) #wir übergeben die daten für das field
 
-        # Linksklick drücken
         inputs[1].type = 0
         inputs[1].mi = MOUSEINPUT(0, 0, 0, MOUSEEVENTF_LEFTDOWN, 0, None)
-
-        # Linksklick loslassen
+ 
         inputs[2].type = 0
         inputs[2].mi = MOUSEINPUT(0, 0, 0, MOUSEEVENTF_LEFTUP, 0, None)
 
         curr_x, curr_y = self.get_cursor_pos()
         result = user32.SendInput(3, inputs, ctypes.sizeof(INPUT))
         if result != 3:
-            print(f"Fehler bei SendInput. Erwartet: 3, Gesendet: {result}")
+            print(f"Error while SendInput. Expected: 3, Send: {result}")
         else:
-            print("Klick erfolgreich ausgeführt.")
+            print("Click was Sucessful")
         self.set_cursor_pos(curr_x, curr_y) 
 
     def scroll_down(self, steps=1):
