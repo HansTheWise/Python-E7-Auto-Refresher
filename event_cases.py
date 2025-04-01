@@ -1,9 +1,7 @@
 import ctypes
-import numpy as np
 from ctypes import wintypes
 import time
-from ctypes import wintypes, Structure, c_long, c_void_p, c_uint16, sizeof
-
+import colourrecognition
 # mach einfach
 
 MOUSEEVENTF_LEFTDOWN = 0x0002
@@ -16,6 +14,9 @@ TARGET_X_POS = "x_pos"
 TARGET_Y_POS = "y_pos"
 TARGET_WIDTH = "width"
 TARGET_HEIGHT = "height"
+
+X_SCALING = 160
+Y_SCALING = 90
 
 VK_LBUTTON = 0x01  # Linke Maustaste
 VK_RBUTTON = 0x02  # Rechte Maustaste
@@ -46,6 +47,7 @@ class E7_Pos:
     BOOKMARK_Y = 7
     BM_WIDTH = 1
     BM_HEIGHT = 83
+    
 
 
 user32 = ctypes.windll.user32
@@ -172,8 +174,8 @@ class Scrip_Modules():
             return False
 
     def get_click_position(self, x, y):
-        pixel_x = self.wnd_stats[TARGET_X_POS] + int((x/160) * self.wnd_stats[TARGET_WIDTH])
-        pixel_y = self.wnd_stats[TARGET_Y_POS] + int((y/90) * self.wnd_stats[TARGET_HEIGHT])
+        pixel_x = self.wnd_stats[TARGET_X_POS] + int((x/X_SCALING) * self.wnd_stats[TARGET_WIDTH])
+        pixel_y = self.wnd_stats[TARGET_Y_POS] + int((y/Y_SCALING) * self.wnd_stats[TARGET_HEIGHT])
         print(f"target area ({pixel_x},{pixel_y})")
         return pixel_x, pixel_y
 

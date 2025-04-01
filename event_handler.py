@@ -53,9 +53,14 @@ class Auto_Script(Scrip_Modules, colourrecognition):
             self.skystone_input.setText("wrong input!")
         
     def pause_session(self):
+        None
     def stop_session(self):
+        None
     def update_log(self):
+        None
     def update_loot_per_sky(self):
-        
+        None
     
-          
+if __name__ == "__main__":
+    test = Auto_Script()
+    
