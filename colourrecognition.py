@@ -4,8 +4,22 @@ import win32con
 import numpy as np
 from ctypes import windll, byref, c_int
 import time
+from event_cases import Scrip_Modules
 
 # Force DPI awareness
+
+"""
+testen ob die farbe für book marks nur einmal auftritt 
+    vielleicht mit 1-5 wertabweichung um kompremirung zu beachten
+    --> benötig keine bilderkennung
+als scaling einen sehr großen wert 100000 zu 100000 oder noch größer für genauen ramen
+wenn wir nur nach einem value schauen haben wir konstanten aufwand eine line pixel wären ca 1000+ vergleiche
+wenn dann noch in 5 abschnitte unterteilt dann maybe 500+- kommt auf festergröße an maybe festlegen?
+
+items haben rahmen, dieser hat glaube immer die selbe farbe, können wir die position des rahmens bestimmen so wissen wir
+die position des items innerhalb
+"""
+
 windll.user32.SetProcessDPIAware()
 
 
@@ -14,11 +28,12 @@ def capture_window(window_title):
     if not hwnd:
         raise ValueError(f"Window '{window_title}' not found")
 
-    # Bring window to foreground
-    win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
-    win32gui.SetForegroundWindow(hwnd)
-    time.sleep(0.5)  # Allow for window redraw
-
+    # funktion schon vorhanden
+    check = Scrip_Modules.is_window_foreground(hwnd)
+    if not check:
+        print("fenster nicht gefunden")
+        return
+    
     # Get client area dimensions
     rect = win32gui.GetClientRect(hwnd)
     width = rect[2] - rect[0]
