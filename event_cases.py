@@ -15,8 +15,8 @@ TARGET_Y_POS = "y_pos"
 TARGET_WIDTH = "width"
 TARGET_HEIGHT = "height"
 
-X_SCALING = 160
-Y_SCALING = 90
+X_SCALING = 160000
+Y_SCALING = 90000
 
 VK_LBUTTON = 0x01  # Linke Maustaste
 VK_RBUTTON = 0x02  # Rechte Maustaste
@@ -30,23 +30,23 @@ class Events:
     NO_SKYSTONES = "NO_SKYSTONES"
     
 class E7_data:
-    REFRESH_X = 30
-    REFRESH_Y = 82
+    REFRESH_X = 30000
+    REFRESH_Y = 82000
     
-    CONFIRM_X = 92
-    CONFIRM_Y = 58
+    CONFIRM_X = 92000
+    CONFIRM_Y = 58000
     
-    DRAG_START_X = 130
+    DRAG_START_X = 130000
     DRAG_START_Y = None
     DRAG_DST_X = None
     DRAG_DST_Y = None
 
     SCROLL_DOWN = 1
 #-------------
-    BOOKMARK_X = 74
-    BOOKMARK_Y = 7
-    BM_WIDTH = 1
-    BM_HEIGHT = 83
+    BOOKMARKS_X = 110000
+    BOOKMARK_Y = 7000
+    BM_WIDTH = 12000
+    BM_HEIGHT = 83000
     
     EXPECTED_BOOKMARK_COLOR_BGR = 0xAA55CC # <--- HIER DEINE FARBE EINTRAGEN
     COLOR_TOLERANCE = 10 # Erlaubte Abweichung pro Farbkanal (0-255)
@@ -178,10 +178,15 @@ class Scrip_Modules():
     def get_click_position(self, x, y):
         pixel_x = self.wnd_stats[TARGET_X_POS] + int((x/X_SCALING) * self.wnd_stats[TARGET_WIDTH])
         pixel_y = self.wnd_stats[TARGET_Y_POS] + int((y/Y_SCALING) * self.wnd_stats[TARGET_HEIGHT])
-        print(f"target area ({pixel_x},{pixel_y})")
+        print(f"target pixel ({pixel_x},{pixel_y})")
         return pixel_x, pixel_y
 
-
+    def get_area_position(self, x, y):
+        area_x = self.wnd_stats[TARGET_X_POS] + int((x/X_SCALING) * self.wnd_stats[TARGET_WIDTH])
+        area_y = self.wnd_stats[TARGET_Y_POS] + int((y/Y_SCALING) * self.wnd_stats[TARGET_HEIGHT])
+        print(f"target area ({area_x},{area_y})")
+        return area_x, area_y
+    
     def match_event(self, event):
         check = self.control_checks()
         if check == False:
@@ -280,16 +285,16 @@ class Scrip_Modules():
         self.set_cursor_pos(curr_x, curr_y)        
         time.sleep(0.5)
         
-    def get_pixel_color(self, screen_x, screen_y):
+    def get_pixel_color(self, abs_screen_x, abs_screen_y):
         """Liest die Farbe eines Pixels an den absoluten Bildschirmkoordinaten."""
         hdc = user32.GetDC(None) # Gerätekontext für den gesamten Bildschirm
         if not hdc:
             print("Fehler: Konnte keinen Gerätekontext (HDC) bekommen.")
             return None
         try:
-            pixel_color = gdi32.GetPixel(hdc, screen_x, screen_y)
+            pixel_color = gdi32.GetPixel(hdc, abs_screen_x, abs_screen_y)
             if pixel_color == -1: # CLR_INVALID
-                 print(f"Fehler: GetPixel fehlgeschlagen für ({screen_x}, {screen_y}). Außerhalb des Bildschirms?")
+                 print(f"Fehler: GetPixel fehlgeschlagen für ({abs_screen_x}, {abs_screen_y}). Außerhalb des Bildschirms?")
                  return None
             return pixel_color
         finally:
@@ -313,45 +318,45 @@ class Scrip_Modules():
                 abs(g1 - g2) <= tolerance and
                 abs(b1 - b2) <= tolerance)
 
-    def find_bookmark_by_color(self):
-        """Versucht, das Lesezeichen anhand der Farbe an einer bekannten Position zu finden."""
-        check = self.control_checks()
-        if not check:
-            print("Kontrollchecks fehlgeschlagen, Suche abgebrochen.")
-            return False
+    def find_bookmark_and_purchase(self):
+        # Stelle sicher, dass das Ziel-Fenster existiert, im Vordergrund ist, und keine Maustaste gedrückt ist.
+        if not self.control_checks():
+            print("Kontrollchecks fehlgeschlagen, Abbruch der Suche.")
+            return
 
-        # Wähle einen oder mehrere Punkte innerhalb des erwarteten Symbolbereichs
-        # Beispiel: Prüfe einen Punkt in der oberen Hälfte des definierten BM-Bereichs
-        check_rel_x = E7_data.BOOKMARK_X + (E7_data.BM_WIDTH // 2) # Mitte der Breite
-        check_rel_y = E7_data.BOOKMARK_Y + (E7_data.BM_HEIGHT // 4) # Oberes Viertel der Höhe
+        # Berechne den absoluten Startpunkt des Scannbereichs
+        area_x, area_y = self.get_area_position(E7_data.BOOKMARKS_X, 0)
+        # Skalierung des Untersuchungsbereichs gemäß Fenstergröße
+        area_width, area_height = self.get_area_position(16000, 9000)
+        print(f"Scanne Bereich: X = {area_x}, Y = {area_y}, Breite = {area_width}, Höhe = {area_height}")
 
-        # Konvertiere relative zu absoluten Bildschirmkoordinaten
-        # Achtung: get_click_position ist vielleicht nicht ideal, da es für Klicks gedacht ist.
-        # Besser eine dedizierte Funktion oder direkte Berechnung:
-        abs_check_x = self.wnd_stats[TARGET_X_POS] + int((check_rel_x / X_SCALING) * self.wnd_stats[TARGET_WIDTH])
-        abs_check_y = self.wnd_stats[TARGET_Y_POS] + int((check_rel_y / Y_SCALING) * self.wnd_stats[TARGET_HEIGHT])
+        found = False
+        found_x = found_y = None
+        # Definiere einen Schrittwert zur Beschleunigung des Scannvorgangs (z.B. alle 5 Pixel)
+        step = 5  
+        for x in range(area_x, area_x + area_width, step):
+            for y in range(area_y, area_y + area_height, step):
+                current_color = self.get_pixel_color(x, y)
+                if current_color is None:
+                    continue  # Überspringe bei Fehler beim Lesen der Farbe
+                if self.compare_color(current_color, E7_data.EXPECTED_BOOKMARK_COLOR_BGR, E7_data.COLOR_TOLERANCE):
+                    found = True
+                    found_x = x
+                    found_y = y
+                    break  # Erste Übereinstimmung gefunden, Schleifen abbrechen
+            if found:
+                break
 
-        print(f"Prüfe Farbe an relativer Position ({check_rel_x}, {check_rel_y}) -> absolute Position ({abs_check_x}, {abs_check_y})")
-
-        # Hole die Farbe am Prüfpunkt
-        current_color = self.get_pixel_color(abs_check_x, abs_check_y)
-
-        if current_color is None:
-            print("Farbe konnte nicht gelesen werden.")
-            return False
-
-        # Vergleiche die Farbe
-        print(f"Erwartete Farbe: {hex(E7_data.EXPECTED_BOOKMARK_COLOR_BGR)}, Gefundene Farbe: {hex(current_color)}")
-        is_match = self.compare_color(current_color, E7_data.EXPECTED_BOOKMARK_COLOR_BGR, E7_data.COLOR_TOLERANCE)
-
-        if is_match:
-            print("Lesezeichen-Farbe gefunden!")
-            return True
+        if found:
+            print(f"Bookmark gefunden an Position: ({found_x}, {found_y})")
+            # Berechne die Position des Kauf-Buttons: etwa 20% weiter rechts relativ zum Bookmark
+            # Hier als Beispiel: Verschiebung um 20% der Breite des untersuchten Bereichs
+            purchase_x = int(found_x + 0.2 * area_width)
+            purchase_y = found_y  # Bei Bedarf kann hier auch eine Verschiebung in Y berücksichtigt werden
+            print(f"Kauf-Button (simuliert) an Position: ({purchase_x}, {purchase_y})")
+            self.click_event(purchase_x, purchase_y)
         else:
-            print("Lesezeichen-Farbe NICHT gefunden.")
-            return False
-
-    # ... (dein restlicher Code, match_event, click_event etc.) ...
+            print("Bookmark konnte im untersuchten Bereich nicht gefunden werden.")
 
     def test_function1(self):
             # Prüfe, ob das Lesezeichen da ist
