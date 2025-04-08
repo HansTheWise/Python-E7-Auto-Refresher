@@ -29,7 +29,7 @@ class Events:
     SCROLL = "SCROLL"    
     NO_SKYSTONES = "NO_SKYSTONES"
     
-class E7_Pos:
+class E7_data:
     REFRESH_X = 30
     REFRESH_Y = 82
     
@@ -48,6 +48,8 @@ class E7_Pos:
     BM_WIDTH = 1
     BM_HEIGHT = 83
     
+    EXPECTED_BOOKMARK_COLOR_BGR = 0xAA55CC # <--- HIER DEINE FARBE EINTRAGEN
+    COLOR_TOLERANCE = 10 # Erlaubte Abweichung pro Farbkanal (0-255)
 
 
 user32 = ctypes.windll.user32
@@ -194,16 +196,16 @@ class Scrip_Modules():
                 
             case Events.REFRESH:
                 print(f"refreshing")
-                x, y = self.get_click_position(E7_Pos.REFRESH_X, E7_Pos.REFRESH_Y)
+                x, y = self.get_click_position(E7_data.REFRESH_X, E7_data.REFRESH_Y)
                 self.click_event(x, y)
                     
             case Events.CONFIRM:
-                x, y = self.get_click_position(E7_Pos.CONFIRM_X, E7_Pos.CONFIRM_Y)
+                x, y = self.get_click_position(E7_data.CONFIRM_X, E7_data.CONFIRM_Y)
                 self.click_event(x, y)
                 
             case Events.DRAG:
-                start_x, start_y = self.get_click_position(E7_Pos.DRAG_START_X, E7_Pos.DRAG_START_Y)
-                dst_x, dst_y = self.get_click_position(E7_Pos.DRAG_DST_X, E7_Pos.DRAG_START_Y)
+                start_x, start_y = self.get_click_position(E7_data.DRAG_START_X, E7_data.DRAG_START_Y)
+                dst_x, dst_y = self.get_click_position(E7_data.DRAG_DST_X, E7_data.DRAG_START_Y)
                 self.drag_event(start_x, start_y, dst_x, dst_y)
             case Events.SCROLL:
                 self.scroll_down(1)
@@ -277,6 +279,98 @@ class Scrip_Modules():
         user32.SendInput(4, inputs, ctypes.sizeof(INPUT))
         self.set_cursor_pos(curr_x, curr_y)        
         time.sleep(0.5)
+        
+    def get_pixel_color(self, screen_x, screen_y):
+        """Liest die Farbe eines Pixels an den absoluten Bildschirmkoordinaten."""
+        hdc = user32.GetDC(None) # Gerätekontext für den gesamten Bildschirm
+        if not hdc:
+            print("Fehler: Konnte keinen Gerätekontext (HDC) bekommen.")
+            return None
+        try:
+            pixel_color = gdi32.GetPixel(hdc, screen_x, screen_y)
+            if pixel_color == -1: # CLR_INVALID
+                 print(f"Fehler: GetPixel fehlgeschlagen für ({screen_x}, {screen_y}). Außerhalb des Bildschirms?")
+                 return None
+            return pixel_color
+        finally:
+            user32.ReleaseDC(None, hdc) # Wichtig: Immer freigeben!
+
+    def compare_color(self, color1_bgr, color2_bgr, tolerance):
+        """Vergleicht zwei BGR-Farbwerte mit einer Toleranz."""
+        if color1_bgr is None or color2_bgr is None:
+            return False
+        # BGR-Integer in R, G, B Komponenten zerlegen
+        r1 = color1_bgr & 0xFF
+        g1 = (color1_bgr >> 8) & 0xFF
+        b1 = (color1_bgr >> 16) & 0xFF
+
+        r2 = color2_bgr & 0xFF
+        g2 = (color2_bgr >> 8) & 0xFF
+        b2 = (color2_bgr >> 16) & 0xFF
+
+        # Vergleichen mit Toleranz
+        return (abs(r1 - r2) <= tolerance and
+                abs(g1 - g2) <= tolerance and
+                abs(b1 - b2) <= tolerance)
+
+    def find_bookmark_by_color(self):
+        """Versucht, das Lesezeichen anhand der Farbe an einer bekannten Position zu finden."""
+        check = self.control_checks()
+        if not check:
+            print("Kontrollchecks fehlgeschlagen, Suche abgebrochen.")
+            return False
+
+        # Wähle einen oder mehrere Punkte innerhalb des erwarteten Symbolbereichs
+        # Beispiel: Prüfe einen Punkt in der oberen Hälfte des definierten BM-Bereichs
+        check_rel_x = E7_data.BOOKMARK_X + (E7_data.BM_WIDTH // 2) # Mitte der Breite
+        check_rel_y = E7_data.BOOKMARK_Y + (E7_data.BM_HEIGHT // 4) # Oberes Viertel der Höhe
+
+        # Konvertiere relative zu absoluten Bildschirmkoordinaten
+        # Achtung: get_click_position ist vielleicht nicht ideal, da es für Klicks gedacht ist.
+        # Besser eine dedizierte Funktion oder direkte Berechnung:
+        abs_check_x = self.wnd_stats[TARGET_X_POS] + int((check_rel_x / X_SCALING) * self.wnd_stats[TARGET_WIDTH])
+        abs_check_y = self.wnd_stats[TARGET_Y_POS] + int((check_rel_y / Y_SCALING) * self.wnd_stats[TARGET_HEIGHT])
+
+        print(f"Prüfe Farbe an relativer Position ({check_rel_x}, {check_rel_y}) -> absolute Position ({abs_check_x}, {abs_check_y})")
+
+        # Hole die Farbe am Prüfpunkt
+        current_color = self.get_pixel_color(abs_check_x, abs_check_y)
+
+        if current_color is None:
+            print("Farbe konnte nicht gelesen werden.")
+            return False
+
+        # Vergleiche die Farbe
+        print(f"Erwartete Farbe: {hex(E7_data.EXPECTED_BOOKMARK_COLOR_BGR)}, Gefundene Farbe: {hex(current_color)}")
+        is_match = self.compare_color(current_color, E7_data.EXPECTED_BOOKMARK_COLOR_BGR, E7_data.COLOR_TOLERANCE)
+
+        if is_match:
+            print("Lesezeichen-Farbe gefunden!")
+            return True
+        else:
+            print("Lesezeichen-Farbe NICHT gefunden.")
+            return False
+
+    # ... (dein restlicher Code, match_event, click_event etc.) ...
+
+    def test_function1(self):
+            # Prüfe, ob das Lesezeichen da ist
+            if self.find_bookmark_by_color():
+                 # Mach etwas, wenn es gefunden wurde
+                 print("Aktion wird ausgeführt, da Lesezeichen vorhanden ist.")
+                 # self.match_event(Events.BUY) # Beispiel
+                 pass
+            else:
+                 # Mach etwas anderes, wenn nicht
+                 print("Aktion wird übersprungen, da Lesezeichen fehlt.")
+                 # self.match_event(Events.REFRESH) # Beispiel
+                 pass
+
+            # Optional: Teste deine anderen Events
+            # self.match_event(Events.SCROLL)
+            # self.match_event(Events.REFRESH)
+            # self.match_event(Events.CONFIRM)
+
 
 
     def test_function(self):
@@ -288,6 +382,5 @@ class Scrip_Modules():
 
 if __name__ =="__main__":
     script = Scrip_Modules()
-    script.test_function()
+    script.test_function1()
 
-    # asdasdas
