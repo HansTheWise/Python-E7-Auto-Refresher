@@ -1,7 +1,6 @@
 import ctypes
 from ctypes import wintypes
 import time
-import colourrecognition
 # mach einfach
 
 MOUSEEVENTF_LEFTDOWN = 0x0002
@@ -15,8 +14,8 @@ TARGET_Y_POS = "y_pos"
 TARGET_WIDTH = "width"
 TARGET_HEIGHT = "height"
 
-X_SCALING = 160000
-Y_SCALING = 90000
+X_SCALING = 100000
+Y_SCALING = 100000
 
 VK_LBUTTON = 0x01  # Linke Maustaste
 VK_RBUTTON = 0x02  # Rechte Maustaste
@@ -28,27 +27,28 @@ class Events:
     DRAG = "DRAG"
     SCROLL = "SCROLL"    
     NO_SKYSTONES = "NO_SKYSTONES"
+    SEARCH = "SEARCH"
     
 class E7_data:
-    REFRESH_X = 30000
-    REFRESH_Y = 82000
+    REFRESH_X = 31250
+    REFRESH_Y = 91111
     
-    CONFIRM_X = 92000
-    CONFIRM_Y = 58000
+    CONFIRM_X = 57500
+    CONFIRM_Y = 64444
     
-    DRAG_START_X = 130000
+    DRAG_START_X = None
     DRAG_START_Y = None
     DRAG_DST_X = None
     DRAG_DST_Y = None
 
     SCROLL_DOWN = 1
 #-------------
-    BOOKMARKS_X = 110000
-    BOOKMARK_Y = 7000
-    BM_WIDTH = 12000
-    BM_HEIGHT = 83000
+    BOOKMARKS_X = 43000
+    BOOKMARK_Y = 10000
+    BM_WIDTH = 1
+    BM_HEIGHT = 60000
     
-    EXPECTED_BOOKMARK_COLOR_BGR = 0xAA55CC # <--- HIER DEINE FARBE EINTRAGEN
+    EXPECTED_BOOKMARK_COLOR_BGR = 0xb3f0ff # <--- HIER DEINE FARBE EINTRAGEN
     COLOR_TOLERANCE = 10 # Erlaubte Abweichung pro Farbkanal (0-255)
 
 
@@ -212,8 +212,13 @@ class Scrip_Modules():
                 start_x, start_y = self.get_click_position(E7_data.DRAG_START_X, E7_data.DRAG_START_Y)
                 dst_x, dst_y = self.get_click_position(E7_data.DRAG_DST_X, E7_data.DRAG_START_Y)
                 self.drag_event(start_x, start_y, dst_x, dst_y)
+                
             case Events.SCROLL:
                 self.scroll_down(1)
+                
+            case Events.SEARCH:
+                self.find_bookmark_and_purchase()
+                
             case _:
                 print("Unknown event type")
 
@@ -319,15 +324,11 @@ class Scrip_Modules():
                 abs(b1 - b2) <= tolerance)
 
     def find_bookmark_and_purchase(self):
-        # Stelle sicher, dass das Ziel-Fenster existiert, im Vordergrund ist, und keine Maustaste gedrückt ist.
-        if not self.control_checks():
-            print("Kontrollchecks fehlgeschlagen, Abbruch der Suche.")
-            return
 
         # Berechne den absoluten Startpunkt des Scannbereichs
-        area_x, area_y = self.get_area_position(E7_data.BOOKMARKS_X, 0)
+        area_x, area_y = self.get_area_position(E7_data.BOOKMARKS_X, E7_data.BOOKMARK_Y)
         # Skalierung des Untersuchungsbereichs gemäß Fenstergröße
-        area_width, area_height = self.get_area_position(16000, 9000)
+        area_width, area_height = self.get_area_position(E7_data.BM_WIDTH, E7_data.BM_HEIGHT)
         print(f"Scanne Bereich: X = {area_x}, Y = {area_y}, Breite = {area_width}, Höhe = {area_height}")
 
         found = False
@@ -359,30 +360,15 @@ class Scrip_Modules():
             print("Bookmark konnte im untersuchten Bereich nicht gefunden werden.")
 
     def test_function1(self):
-            # Prüfe, ob das Lesezeichen da ist
-            if self.find_bookmark_by_color():
-                 # Mach etwas, wenn es gefunden wurde
-                 print("Aktion wird ausgeführt, da Lesezeichen vorhanden ist.")
-                 # self.match_event(Events.BUY) # Beispiel
-                 pass
-            else:
-                 # Mach etwas anderes, wenn nicht
-                 print("Aktion wird übersprungen, da Lesezeichen fehlt.")
-                 # self.match_event(Events.REFRESH) # Beispiel
-                 pass
 
-            # Optional: Teste deine anderen Events
-            # self.match_event(Events.SCROLL)
-            # self.match_event(Events.REFRESH)
-            # self.match_event(Events.CONFIRM)
-
-
-
-    def test_function(self):
-            #check
+            self.match_event(Events.SEARCH)
             self.match_event(Events.SCROLL)
             self.match_event(Events.REFRESH)
-            self.match_event(Events.CONFIRM)
+            #self.match_event(Events.CONFIRM)
+
+
+
+
 
 
 if __name__ =="__main__":
