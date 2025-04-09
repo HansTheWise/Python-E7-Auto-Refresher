@@ -2,7 +2,7 @@ import win32gui
 import win32ui
 import win32con
 import numpy as np
-from ctypes import windll, byref, c_int
+from ctypes import windll
 import time
 from event_cases import Scrip_Modules
 

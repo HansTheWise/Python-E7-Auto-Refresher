@@ -1,6 +1,8 @@
 import ctypes
 from ctypes import wintypes
 import time
+
+from PyQt6.QtWidgets import QMainWindow
 # mach einfach
 
 MOUSEEVENTF_LEFTDOWN = 0x0002
@@ -43,13 +45,14 @@ class E7_data:
 
     SCROLL_DOWN = 1
 #-------------
-    BOOKMARKS_X = 43000
-    BOOKMARK_Y = 10000
+    BOOKMARKS_X = 47000
+    BOOKMARK_Y = 11000
     BM_WIDTH = 1
-    BM_HEIGHT = 60000
-    
-    EXPECTED_BOOKMARK_COLOR_BGR = 0xb3f0ff # <--- HIER DEINE FARBE EINTRAGEN
-    COLOR_TOLERANCE = 10 # Erlaubte Abweichung pro Farbkanal (0-255)
+    BM_HEIGHT = 75000
+
+    EXPECTED_BOOKMARK_COLOR_BGR = 3095372 #0xb3f0ff # <--- HIER DEINE FARBE EINTRAGEN
+    EXPECTED_MYSTIC_COLOR_BGR = ""             #0xff3333
+    COLOR_TOLERANCE = 1 # Erlaubte Abweichung pro Farbkanal (0-255)
 
 
 user32 = ctypes.windll.user32
@@ -243,7 +246,7 @@ class Scrip_Modules():
             print(f"Error while SendInput. Expected: 3, Send: {result}")
         else:
             print("Click was Sucessful")
-        self.set_cursor_pos(curr_x, curr_y) 
+        self.set_cursor_pos(curr_x, curr_y)
 
     def scroll_down(self, steps=1):
         
@@ -334,19 +337,24 @@ class Scrip_Modules():
         found = False
         found_x = found_y = None
         # Definiere einen Schrittwert zur Beschleunigung des Scannvorgangs (z.B. alle 5 Pixel)
-        step = 5  
-        for x in range(area_x, area_x + area_width, step):
+        step = 5
+        i = 0
+        while i < 1:
             for y in range(area_y, area_y + area_height, step):
-                current_color = self.get_pixel_color(x, y)
+                user32.SetCursorPos(area_x, y)
+                current_color = self.get_pixel_color(area_x, y)
+                print(current_color)
                 if current_color is None:
                     continue  # Überspringe bei Fehler beim Lesen der Farbe
                 if self.compare_color(current_color, E7_data.EXPECTED_BOOKMARK_COLOR_BGR, E7_data.COLOR_TOLERANCE):
                     found = True
-                    found_x = x
+                    found_x = area_x
                     found_y = y
                     break  # Erste Übereinstimmung gefunden, Schleifen abbrechen
             if found:
                 break
+            area_x += 1
+            i += 1
 
         if found:
             print(f"Bookmark gefunden an Position: ({found_x}, {found_y})")
@@ -362,8 +370,8 @@ class Scrip_Modules():
     def test_function1(self):
 
             self.match_event(Events.SEARCH)
-            self.match_event(Events.SCROLL)
-            self.match_event(Events.REFRESH)
+            #self.match_event(Events.SCROLL)
+            #self.match_event(Events.REFRESH)
             #self.match_event(Events.CONFIRM)
 
 
